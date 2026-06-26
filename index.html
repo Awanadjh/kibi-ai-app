@@ -9,6 +9,19 @@
 
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        @keyframes pulse-ring {
+            0% { transform: scale(0.3); opacity: 0; }
+            50% { opacity: 0.5; }
+            100% { transform: scale(1.2); opacity: 0; }
+        }
+        @keyframes spin-slow {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .animate-pulse-ring { animation: pulse-ring 3s cubic-bezier(0.215, 0.610, 0.355, 1) infinite; }
+        .animate-spin-slow { animation: spin-slow 10s linear infinite; }
+    </style>
 </head>
 <body class="bg-slate-900 text-white font-sans min-h-screen flex flex-col justify-between pb-24">
 
@@ -78,9 +91,29 @@
                 </button>
             </div>
 
+            <div class="bg-slate-800/60 rounded-3xl p-6 border border-slate-700/60 flex flex-col items-center justify-center relative overflow-hidden h-48">
+                <div id="miningRing" class="absolute w-36 h-36 rounded-full border-2 border-cyan-500/20 hidden animate-pulse-ring"></div>
+                <div id="miningCircle" class="w-28 h-28 rounded-full bg-slate-900 border border-slate-700 flex items-center justify-center relative z-10 transition-all">
+                    <i id="miningIcon" class="fas fa-robot text-slate-600 text-4xl"></i>
+                    <div id="miningSpinner" class="absolute inset-0 border-t-2 border-b-2 border-cyan-400 rounded-full hidden animate-spin-slow"></div>
+                </div>
+                <p id="miningStatusText" class="text-xs font-bold uppercase tracking-widest text-slate-500 mt-4 z-10">Jaringan Off</p>
+            </div>
+
+            <div class="bg-slate-800 rounded-2xl p-4 border border-slate-700 flex justify-between items-center">
+                <div>
+                    <h4 class="text-sm font-bold text-slate-200"><i class="fas fa-bolt text-amber-400 mr-2"></i>Speed Booster</h4>
+                    <p class="text-[11px] text-slate-400 mt-0.5">Nonton iklan: +10% speed/iklan (Maks 10x)</p>
+                    <p class="text-xs font-bold text-cyan-400 mt-1">Multiplier: <span id="boostDisplay">1.0</span>x</p>
+                </div>
+                <button id="btnBooster" onclick="watchAdBooster()" class="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-slate-950 font-extrabold px-4 py-2.5 rounded-xl text-xs transition-all flex items-center space-x-1 shadow-lg shadow-amber-500/10">
+                    <i class="fas fa-ad text-sm"></i> <span>BOOST</span>
+                </button>
+            </div>
+
             <div class="bg-slate-800 rounded-3xl p-5 border border-slate-700 text-center space-y-4">
                 <div class="flex justify-between text-xs px-1 text-slate-400 font-medium">
-                    <span><i class="fas fa-clock mr-1 text-cyan-400"></i> Status Sesi Cloud (4 Jam)</span>
+                    <span><i class="fas fa-clock mr-1 text-cyan-400"></i> Waktu Sesi (4 Jam)</span>
                     <span id="timerDisplay" class="font-mono font-bold text-cyan-400">04:00:00</span>
                 </div>
                 <div class="w-full bg-slate-700 rounded-full h-3 overflow-hidden">
@@ -88,7 +121,7 @@
                 </div>
                 
                 <button id="btnMining" onclick="handleMiningAction()" class="w-full bg-slate-700 text-slate-400 font-bold py-4 rounded-2xl text-lg flex items-center justify-center space-x-2 cursor-not-allowed" disabled>
-                    <i class="fas fa-lock"></i> <span>Kunci Terbuka Setelah Tugas Selesai</span>
+                    <i class="fas fa-lock"></i> <span>Selesaikan Tugas Sosial Dahulu</span>
                 </button>
             </div>
 
@@ -101,17 +134,45 @@
         <div id="tabTasks" class="hidden space-y-4 flex-grow">
             <div class="bg-slate-800 rounded-2xl p-5 border border-slate-700">
                 <h3 class="font-bold text-lg text-amber-400 mb-1"><i class="fab fa-twitter mr-2"></i>Tugas Sosial Wajib</h3>
-                <p class="text-xs text-slate-400 mb-4">Selesaikan semua langkah di bawah untuk membuka akses jaringan Cloud.</p>
+                <p class="text-xs text-slate-400 mb-4">Klik link tugas di bawah, buka websitenya, lalu klik tombol verifikasi/klaim.</p>
                 
                 <div class="space-y-3">
-                    <div onclick="completeTask(1)" class="flex justify-between items-center p-3.5 bg-slate-900/60 rounded-xl border border-slate-700 hover:border-cyan-500 cursor-pointer transition-all">
-                        <span class="text-xs text-slate-200"><span id="tCheck1" class="text-slate-500 mr-2"><i class="far fa-circle"></i></span> 1. Follow Official Twitter Account</span>
-                        <i class="fas fa-external-link-alt text-slate-500 text-xs"></i>
+                    <div class="p-3.5 bg-slate-900/60 rounded-xl border border-slate-700 flex justify-between items-center">
+                        <div class="flex flex-col">
+                            <span class="text-xs text-slate-200 font-medium">1. Follow Official Twitter Account</span>
+                            <span id="tStatus1" class="text-[10px] text-amber-500 mt-0.5 font-bold"><i class="fas fa-link mr-1"></i>Belum Diklik</span>
+                        </div>
+                        <div class="flex space-x-2">
+                            <button id="tLinkBtn1" onclick="openTaskLink(1, 'https://x.com')" class="bg-cyan-500 hover:bg-cyan-600 text-slate-950 font-bold px-3 py-1.5 rounded-lg text-xs">Buka</button>
+                            <button id="tClaimBtn1" onclick="claimTaskReward(1)" class="bg-slate-700 text-slate-400 font-bold px-3 py-1.5 rounded-lg text-xs cursor-not-allowed" disabled>Klaim</button>
+                        </div>
                     </div>
-                    <div onclick="completeTask(2)" class="flex justify-between items-center p-3.5 bg-slate-900/60 rounded-xl border border-slate-700 hover:border-cyan-500 cursor-pointer transition-all">
-                        <span class="text-xs text-slate-200"><span id="tCheck2" class="text-slate-500 mr-2"><i class="far fa-circle"></i></span> 2. Like Pins & Recent Posts</span>
-                        <i class="fas fa-external-link-alt text-slate-500 text-xs"></i>
+                    <div class="p-3.5 bg-slate-900/60 rounded-xl border border-slate-700 flex justify-between items-center">
+                        <div class="flex flex-col">
+                            <span class="text-xs text-slate-200 font-medium">2. Like Pins & Recent Posts</span>
+                            <span id="tStatus2" class="text-[10px] text-amber-500 mt-0.5 font-bold"><i class="fas fa-link mr-1"></i>Belum Diklik</span>
+                        </div>
+                        <div class="flex space-x-2">
+                            <button id="tLinkBtn2" onclick="openTaskLink(2, 'https://x.com')" class="bg-cyan-500 hover:bg-cyan-600 text-slate-950 font-bold px-3 py-1.5 rounded-lg text-xs">Buka</button>
+                            <button id="tClaimBtn2" onclick="claimTaskReward(2)" class="bg-slate-700 text-slate-400 font-bold px-3 py-1.5 rounded-lg text-xs cursor-not-allowed" disabled>Klaim</button>
+                        </div>
                     </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="tabReferral" class="hidden space-y-4 flex-grow">
+            <div class="bg-slate-800 rounded-2xl p-5 border border-slate-700 text-center space-y-4">
+                <div class="w-14 h-14 bg-cyan-500/10 text-cyan-400 rounded-2xl flex items-center justify-center mx-auto border border-cyan-500/20">
+                    <i class="fas fa-users text-2xl"></i>
+                </div>
+                <div>
+                    <h3 class="font-bold text-lg">Program Referral KIBI AI</h3>
+                    <p class="text-xs text-slate-400 mt-1">Undang teman kamu untuk menambang bersama dan dapatkan bonus +10% dari hasil tambang mereka.</p>
+                </div>
+                <div class="bg-slate-900 rounded-xl p-3 border border-slate-700 flex justify-between items-center">
+                    <span id="refLinkDisplay" class="text-xs text-cyan-400 font-mono select-all">https://kibi.ai/ref?id=loading</span>
+                    <button onclick="navigator.clipboard.writeText(document.getElementById('refLinkDisplay').innerText); alert('Link disalin!')" class="text-xs bg-slate-800 hover:bg-slate-700 px-3 py-1.5 rounded-lg border border-slate-600 font-bold">Salin</button>
                 </div>
             </div>
         </div>
@@ -128,14 +189,17 @@
             </div>
         </div>
 
-        <nav class="fixed bottom-0 left-0 right-0 bg-slate-950 border-t border-slate-800 py-3 px-6 flex justify-between items-center max-w-md mx-auto z-50">
-            <button onclick="switchTab('mining')" id="nav-mining" class="flex flex-col items-center space-y-1 text-cyan-400">
+        <nav class="fixed bottom-0 left-0 right-0 bg-slate-950 border-t border-slate-800 py-3 px-4 flex justify-between items-center max-w-md mx-auto z-50">
+            <button onclick="switchTab('mining')" id="nav-mining" class="flex flex-col items-center space-y-1 text-cyan-400 flex-1">
                 <i class="fas fa-hammer text-lg"></i><span class="text-[10px] font-bold">Mining</span>
             </button>
-            <button onclick="switchTab('tasks')" id="nav-tasks" class="flex flex-col items-center space-y-1 text-slate-500">
+            <button onclick="switchTab('tasks')" id="nav-tasks" class="flex flex-col items-center space-y-1 text-slate-500 flex-1">
                 <i class="fas fa-tasks text-lg"></i><span class="text-[10px] font-bold">Tasks</span>
             </button>
-            <button onclick="switchTab('swap')" id="nav-swap" class="flex flex-col items-center space-y-1 text-slate-500">
+            <button onclick="switchTab('referral')" id="nav-referral" class="flex flex-col items-center space-y-1 text-slate-500 flex-1">
+                <i class="fas fa-users text-lg"></i><span class="text-[10px] font-bold">Referral</span>
+            </button>
+            <button onclick="switchTab('swap')" id="nav-swap" class="flex flex-col items-center space-y-1 text-slate-500 flex-1">
                 <i class="fas fa-exchange-alt text-lg"></i><span class="text-[10px] font-bold">Swap</span>
             </button>
         </nav>
@@ -163,9 +227,11 @@
         let miningStatus = "READY"; 
         let targetEndTime = null;
         let timerTicker = null;
-        let taskState = { 1: false, 2: false };
+        
+        let taskState = { 1: { clicked: false, claimed: false }, 2: { clicked: false, claimed: false } };
         let currentKibiSaldo = 0;
         let currentSolSaldo = 0.0;
+        let boostMultiplier = 1.0;
 
         window.handleSecureLogin = async function() {
             const user = document.getElementById('inputUsername').value.trim();
@@ -183,14 +249,14 @@
 
                 if (!userSnap.exists()) {
                     await setDoc(userRef, { username: user, walletAddress: wallet, is_suspended: false });
-                    // Set saldo awal di koleksi balances jika user baru
-                    await setDoc(doc(db, "balances", currentUid), { kibi_points: 0, sol_balance: "0.000000000" });
+                    await setDoc(doc(db, "balances", currentUid), { kibi_points: 0, sol_balance: "0.000000000", booster_count: 0 });
                 }
 
                 document.getElementById('authScreen').classList.add('hidden');
                 document.getElementById('mainApp').classList.remove('hidden');
                 document.getElementById('userDisplay').innerText = "@" + user;
                 document.getElementById('walletDisplay').innerText = wallet.substring(0,5) + "..." + wallet.substring(wallet.length-4);
+                document.getElementById('refLinkDisplay').innerText = `https://kibi.ai/ref?id=${currentUid}`;
 
                 await syncServerData();
 
@@ -203,18 +269,19 @@
         async function syncServerData() {
             if(!currentUid) return;
 
-            // Ambil Saldo Langsung dari Firestore
             const balRef = doc(db, "balances", currentUid);
             const balSnap = await getDoc(balRef);
             if(balSnap.exists()) {
                 currentKibiSaldo = balSnap.data().kibi_points || 0;
                 currentSolSaldo = parseFloat(balSnap.data().sol_balance) || 0.0;
+                const boosterCount = balSnap.data().booster_count || 0;
                 
+                boostMultiplier = 1.0 + (boosterCount * 0.1);
+                document.getElementById('boostDisplay').innerText = boostMultiplier.toFixed(1);
                 document.getElementById('balKibi').innerText = currentKibiSaldo;
                 document.getElementById('balSol').innerText = currentSolSaldo.toFixed(5);
             }
 
-            // Ambil Status Sesi Tambang Langsung dari Firestore
             const sessionRef = doc(db, "mining_sessions", currentUid);
             const sessionSnap = await getDoc(sessionRef);
             
@@ -233,19 +300,41 @@
                     }
                 } else {
                     miningStatus = "READY";
+                    resetVisualMiningUI();
                 }
             }
             checkAllTasks();
         }
 
-        window.completeTask = function(num) {
-            taskState[num] = true;
-            document.getElementById(`tCheck${num}`).innerHTML = '<i class="fas fa-check-circle text-cyan-400"></i>';
+        // VALIDASI TUGAS YANG BENAR
+        window.openTaskLink = function(num, url) {
+            window.open(url, '_blank');
+            taskState[num].clicked = true;
+            
+            const claimBtn = document.getElementById(`tClaimBtn${num}`);
+            claimBtn.disabled = false;
+            claimBtn.classList.remove('bg-slate-700', 'text-slate-400', 'cursor-not-allowed');
+            claimBtn.classList.add('bg-emerald-500', 'text-slate-950', 'hover:bg-emerald-600');
+            
+            document.getElementById(`tStatus${num}`).className = "text-[10px] text-cyan-400 mt-0.5 font-bold";
+            document.getElementById(`tStatus${num}`).innerHTML = '<i class="fas fa-eye mr-1"></i>Sudah Dilihat (Siap Klaim)';
+        }
+
+        window.claimTaskReward = function(num) {
+            if(!taskState[num].clicked) return;
+            taskState[num].claimed = true;
+            
+            const itemStatus = document.getElementById(`tStatus${num}`);
+            itemStatus.className = "text-[10px] text-emerald-400 mt-0.5 font-bold";
+            itemStatus.innerHTML = '<i class="fas fa-check-circle mr-1"></i>Selesai & Diverifikasi';
+            
+            document.getElementById(`tLinkBtn${num}`).remove();
+            document.getElementById(`tClaimBtn${num}`).remove();
             checkAllTasks();
         }
 
         function checkAllTasks() {
-            const allDone = Object.values(taskState).every(v => v === true);
+            const allDone = taskState[1].claimed && taskState[2].claimed;
             if(!allDone) return;
 
             document.getElementById('taskWarningBanner').classList.add('hidden');
@@ -257,14 +346,38 @@
                 btn.disabled = false;
                 btn.className = "w-full bg-gradient-to-r from-cyan-500 to-blue-500 text-white font-bold py-4 rounded-2xl text-lg flex items-center justify-center space-x-2";
                 btn.innerHTML = '<span>START CLOUD MINING</span>';
+                resetVisualMiningUI();
             } else if (miningStatus === "MINING") {
                 btn.disabled = true;
                 btn.className = "w-full bg-slate-800 text-cyan-400 border border-cyan-500/30 font-bold py-4 rounded-2xl text-lg flex items-center justify-center space-x-2";
                 btn.innerHTML = '<i class="fas fa-sync animate-spin mr-2"></i> CLOUD MINING ACTIVE';
+                setVisualMiningActive();
             } else if (miningStatus === "CAN_CLAIM") {
                 btn.disabled = false;
                 btn.className = "w-full bg-gradient-to-r from-amber-500 to-orange-500 text-slate-950 font-black py-4 rounded-2xl text-lg flex items-center justify-center space-x-2";
-                btn.innerHTML = '<span>KLAIM HASIL TAMBANG (+100 KIBI)</span>';
+                btn.innerHTML = '<span>KLAIM HASIL TAMBANG</span>';
+                setVisualMiningDone();
+            }
+        }
+
+        // SPEED BOOSTER ENGINE
+        window.watchAdBooster = async function() {
+            if(!currentUid) return;
+            const balRef = doc(db, "balances", currentUid);
+            const balSnap = await getDoc(balRef);
+            
+            if(balSnap.exists()) {
+                const currentCount = balSnap.data().booster_count || 0;
+                if(currentCount >= 10) {
+                    alert("Kecepatan booster kamu sudah maksimal (10x / +100%)!");
+                    return;
+                }
+                
+                alert("Simulasi Menonton Iklan Monetisasi...");
+                const newCount = currentCount + 1;
+                await updateDoc(balRef, { booster_count: newCount });
+                alert(`Booster Berhasil! Kecepatan meningkat 10%.`);
+                await syncServerData();
             }
         }
 
@@ -300,9 +413,15 @@
                 try {
                     const balRef = doc(db, "balances", currentUid);
                     
-                    // Tambah saldo langsung dari client side
-                    const newKibi = currentKibiSaldo + 100;
-                    const newSol = (currentSolSaldo + 0.00001).toFixed(9);
+                    // Hitung reward dikalikan efek booster speed
+                    const baseKibiReward = 100;
+                    const baseSolReward = 0.00001;
+                    
+                    const finalKibi = Math.round(baseKibiReward * boostMultiplier);
+                    const finalSol = (baseSolReward * boostMultiplier);
+
+                    const newKibi = currentKibiSaldo + finalKibi;
+                    const newSol = (currentSolSaldo + finalSol).toFixed(9);
 
                     await updateDoc(balRef, {
                         kibi_points: newKibi,
@@ -311,7 +430,7 @@
 
                     await updateDoc(sessionRef, { status: "CLAIMED" });
 
-                    alert("Klaim Sukses! Saldo Anda diperbarui.");
+                    alert(`Klaim Sukses! Anda mendapatkan ${finalKibi} PTS & ${finalSol.toFixed(5)} SOL berkat booster ${boostMultiplier}x!`);
                     miningStatus = "READY";
                     targetEndTime = null;
                     if(timerTicker) clearInterval(timerTicker);
@@ -327,8 +446,37 @@
             }
         }
 
+        // VISUAL EFFECTS ENGINE
+        function setVisualMiningActive() {
+            document.getElementById('miningRing').classList.remove('hidden');
+            document.getElementById('miningSpinner').classList.remove('hidden');
+            document.getElementById('miningCircle').className = "w-28 h-28 rounded-full bg-slate-900 border-2 border-cyan-400 flex items-center justify-center relative z-10 shadow-[0_0_20px_rgba(34,211,238,0.2)]";
+            document.getElementById('miningIcon').className = "fas fa-charging-station text-cyan-400 text-4xl animate-pulse";
+            document.getElementById('miningStatusText').className = "text-xs font-bold uppercase tracking-widest text-cyan-400 mt-4 z-10 animate-pulse";
+            document.getElementById('miningStatusText').innerText = "MINING CLOUD ACTIVE";
+        }
+
+        function setVisualMiningDone() {
+            document.getElementById('miningRing').classList.add('hidden');
+            document.getElementById('miningSpinner').classList.add('hidden');
+            document.getElementById('miningCircle').className = "w-28 h-28 rounded-full bg-slate-900 border-2 border-amber-400 flex items-center justify-center relative z-10 shadow-[0_0_20px_rgba(251,191,36,0.2)]";
+            document.getElementById('miningIcon').className = "fas fa-check-double text-amber-400 text-4xl";
+            document.getElementById('miningStatusText').className = "text-xs font-bold uppercase tracking-widest text-amber-400 mt-4 z-10";
+            document.getElementById('miningStatusText').innerText = "MINING SELESAI";
+        }
+
+        function resetVisualMiningUI() {
+            document.getElementById('miningRing').classList.add('hidden');
+            document.getElementById('miningSpinner').classList.add('hidden');
+            document.getElementById('miningCircle').className = "w-28 h-28 rounded-full bg-slate-900 border border-slate-700 flex items-center justify-center relative z-10";
+            document.getElementById('miningIcon').className = "fas fa-robot text-slate-600 text-4xl";
+            document.getElementById('miningStatusText').className = "text-xs font-bold uppercase tracking-widest text-slate-500 mt-4 z-10";
+            document.getElementById('miningStatusText').innerText = "Jaringan Off";
+        }
+
         function runVisualTimer() {
             if(timerTicker) clearInterval(timerTicker);
+            setVisualMiningActive();
             
             timerTicker = setInterval(() => {
                 const now = new Date().getTime();
@@ -356,12 +504,14 @@
         function setupClaimUI() {
             document.getElementById('timerDisplay').innerText = "SELESAI";
             document.getElementById('progressBar').style.width = "100%";
+            setVisualMiningDone();
             checkAllTasks();
         }
 
         window.switchTab = function(tabName) {
             document.getElementById('tabMining').classList.add('hidden');
             document.getElementById('tabTasks').classList.add('hidden');
+            document.getElementById('tabReferral').classList.add('hidden');
             document.getElementById('tabSwap').classList.add('hidden');
             document.querySelectorAll('nav button').forEach(b => b.classList.replace('text-cyan-400', 'text-slate-500'));
 
