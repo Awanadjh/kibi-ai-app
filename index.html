@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KIBI AI Cloud Miner</title>
+    
+    <!-- GOOGLE ADSENSE -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-1644961938657479" crossorigin="anonymous"></script>
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body class="bg-slate-900 text-white font-sans min-h-screen flex flex-col justify-between pb-24">
+
+    <!-- SCREEN 1: LOGIN / CONNECT -->
+    <div id="authScreen" class="flex-grow flex flex-col justify-center items-center px-6 my-auto">
+        <div class="bg-slate-800 p-8 rounded-3xl shadow-2xl w-full max-w-md border border-slate-700">
+            <div class="text-center mb-8">
+                <div class="w-20 h-20 bg-gradient-to-tr from-cyan-500 to-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg shadow-cyan-500/30">
+                    <i class="fas fa-robot text-white text-4xl"></i>
+                </div>
+                <h1 class="text-3xl font-extrabold tracking-tight">KIBI AI MINER</h1>
+                <p class="text-slate-400 text-xs mt-1">Sistem Tambang Cloud Terenkripsi</p>
+            </div>
+            
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Username</label>
+                    <input type="text" id="inputUsername" class="w-full bg-slate-700 border border-slate-600 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-cyan-500" placeholder="Pilih username kamu">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Solana Wallet Address</label>
+                    <input type="text" id="inputWallet" class="w-full bg-slate-700 border border-slate-600 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-cyan-500 text-sm font-mono" placeholder="Masukkan alamat Dompet Solana">
+                </div>
+                <button id="btnConnect" onclick="handleSecureLogin()" class="w-full bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 text-white font-bold py-4 rounded-xl transition-all shadow-lg shadow-cyan-500/20 mt-2">
+                    <span id="loginBtnText">Connect & Amankan Akun</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- SCREEN 2: MAIN INTERFACE -->
+    <div id="mainApp" class="hidden w-full max-w-md mx-auto px-4 pt-6 flex-grow flex flex-col">
+        
+        <!-- TOP USER CARD -->
+        <div class="bg-slate-800 rounded-2xl p-4 flex justify-between items-center border border-slate-700 mb-4">
+            <div class="flex items-center space-x-3">
+                <div class="w-10 h-10 bg-cyan-500/10 rounded-xl flex items-center justify-center border border-cyan-500/30">
+                    <i class="fas fa-user-astronaut text-cyan-400"></i>
+                </div>
+                <div>
+                    <p class="text-[10px] text-slate-400 uppercase font-bold tracking-wider">Pioneer</p>
+                    <h3 id="userDisplay" class="font-bold text-slate-200">@username</h3>
+                </div>
+            </div>
+            <div class="text-right">
+                <p class="text-[10px] text-slate-400 uppercase font-bold tracking-wider">Solana Wallet</p>
+                <p id="walletDisplay" class="text-xs text-cyan-400 font-mono">Loading...</p>
+            </div>
+        </div>
+
+        <!-- TAB: MINING -->
+        <div id="tabMining" class="space-y-4 flex-grow">
+            <!-- DISPLAY SALDO SINKRON BACK-END -->
+            <div class="bg-gradient-to-br from-slate-800 to-slate-900 rounded-3xl p-6 border border-slate-700 shadow-xl grid grid-cols-2 gap-4">
+                <div class="bg-slate-900/50 p-4 rounded-2xl border border-slate-800">
+                    <p class="text-[10px] uppercase font-bold text-slate-400 tracking-wider mb-1">KIBI Points</p>
+                    <h3 class="text-2xl font-black text-cyan-400"><span id="balKibi">0</span> <span class="text-xs font-normal text-slate-400">PTS</span></h3>
+                </div>
+                <div class="bg-slate-900/50 p-4 rounded-2xl border border-slate-800">
+                    <p class="text-[10px] uppercase font-bold text-slate-400 tracking-wider mb-1">Solana Balance</p>
+                    <h3 class="text-2xl font-black text-amber-500"><span id="balSol">0.00000</span> <span class="text-xs font-normal text-slate-400">SOL</span></h3>
+                </div>
+            </div>
+
+            <!-- MANDATORY TASK WARNING -->
+            <div id="taskWarningBanner" class="bg-amber-500/10 border border-amber-500/30 rounded-2xl p-4 flex items-center justify-between">
+                <div class="flex items-center space-x-3">
+                    <i class="fas fa-exclamation-triangle text-amber-500 text-lg animate-pulse"></i>
+                    <p class="text-xs text-amber-200">Selesaikan tugas sosial wajib dulu!</p>
+                </div>
+                <button onclick="switchTab('tasks')" class="bg-amber-500 hover:bg-amber-600 text-slate-900 font-bold px-3 py-1.5 rounded-lg text-xs transition-all">
+                    Lihat Tugas
+                </button>
+            </div>
+
+            <!-- ACTION MINING CARD -->
+            <div class="bg-slate-800 rounded-3xl p-5 border border-slate-700 text-center space-y-4">
+                <div class="flex justify-between text-xs px-1 text-slate-400 font-medium">
+                    <span><i class="fas fa-clock mr-1 text-cyan-400"></i> Status Sesi Cloud (4 Jam)</span>
+                    <span id="timerDisplay" class="font-mono font-bold text-cyan-400">04:00:00</span>
+                </div>
+                <div class="w-full bg-slate-700 rounded-full h-3 overflow-hidden">
+                    <div id="progressBar" class="bg-gradient-to-r from-cyan-500 to-blue-500 h-3 w-0 transition-all duration-500"></div>
+                </div>
+                
+                <!-- Tombol utama interaksi Cloud Function -->
+                <button id="btnMining" onclick="handleMiningAction()" class="w-full bg-slate-700 text-slate-400 font-bold py-4 rounded-2xl text-lg flex items-center justify-center space-x-2 cursor-not-allowed" disabled>
+                    <i class="fas fa-lock"></i> <span>Kunci Terbuka Setelah Tugas Selesai</span>
+                </button>
+            </div>
+
+            <!-- ADS BANNER PLACEHOLDER -->
+            <div class="w-full text-center mt-4 min-h-[90px] bg-slate-800/30 rounded-xl flex items-center justify-center border border-dashed border-slate-700">
+                <ins class="adsbygoogle" style="display:block" data-ad-client="ca-pub-1644961938657479" data-ad-slot="auto" data-full-width-responsive="true"></ins>
+                <script> (adsbygoogle = window.adsbygoogle || []).push({}); </script>
+            </div>
+        </div>
+
+        <!-- TAB: TASKS -->
+        <div id="tabTasks" class="hidden space-y-4 flex-grow">
+            <div class="bg-slate-800 rounded-2xl p-5 border border-slate-700">
+                <h3 class="font-bold text-lg text-amber-400 mb-1"><i class="fab fa-twitter mr-2"></i>Tugas Sosial Wajib</h3>
+                <p class="text-xs text-slate-400 mb-4">Selesaikan semua langkah di bawah untuk membuka akses jaringan Cloud Function.</p>
+                
+                <div class="space-y-3">
+                    <div onclick="completeTask(1)" class="flex justify-between items-center p-3.5 bg-slate-900/60 rounded-xl border border-slate-700 hover:border-cyan-500 cursor-pointer transition-all">
+                        <span class="text-xs text-slate-200"><span id="tCheck1" class="text-slate-500 mr-2"><i class="far fa-circle"></i></span> 1. Follow Official Twitter Account</span>
+                        <i class="fas fa-external-link-alt text-slate-500 text-xs"></i>
+                    </div>
+                    <div onclick="completeTask(2)" class="flex justify-between items-center p-3.5 bg-slate-900/60 rounded-xl border border-slate-700 hover:border-cyan-500 cursor-pointer transition-all">
+                        <span class="text-xs text-slate-200"><span id="tCheck2" class="text-slate-500 mr-2"><i class="far fa-circle"></i></span> 2. Like Pins & Recent Posts</span>
+                        <i class="fas fa-external-link-alt text-slate-500 text-xs"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB: SWAP / WITHDRAW -->
+        <div id="tabSwap" class="hidden space-y-4 flex-grow">
+            <div class="bg-slate-800 rounded-3xl p-6 border border-slate-700 text-center space-y-4">
+                <div class="w-16 h-16 bg-amber-500/10 text-amber-500 rounded-full flex items-center justify-center mx-auto border border-amber-500/20">
+                    <i class="fas fa-exchange-alt text-2xl"></i>
+                </div>
+                <h3 class="font-bold text-lg">Instant Solana Payout</h3>
+                <button onclick="alert('Batas minimum penarikan 0.03 SOL belum terpenuhi.')" class="w-full bg-amber-500 hover:bg-amber-600 text-slate-950 font-black py-4 rounded-xl shadow-lg transition-all">
+                    Withdraw to Wallet
+                </button>
+            </div>
+        </div>
+
+        <!-- BOTTOM NAVIGATION -->
+        <nav class="fixed bottom-0 left-0 right-0 bg-slate-950 border-t border-slate-800 py-3 px-6 flex justify-between items-center max-w-md mx-auto z-50">
+            <button onclick="switchTab('mining')" id="nav-mining" class="flex flex-col items-center space-y-1 text-cyan-400">
+                <i class="fas fa-hammer text-lg"></i><span class="text-[10px] font-bold">Mining</span>
+            </button>
+            <button onclick="switchTab('tasks')" id="nav-tasks" class="flex flex-col items-center space-y-1 text-slate-500">
+                <i class="fas fa-tasks text-lg"></i><span class="text-[10px] font-bold">Tasks</span>
+            </button>
+            <button onclick="switchTab('swap')" id="nav-swap" class="flex flex-col items-center space-y-1 text-slate-500">
+                <i class="fas fa-exchange-alt text-lg"></i><span class="text-[10px] font-bold">Swap</span>
+            </button>
+        </nav>
+    </div>
+
+    <!-- FIREBASE SDK & LOGIC ENGINE -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+        import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-functions.js";
+
+        // Firebase configuration milik kibi-ai-3b5e4
+        const firebaseConfig = {
+            apiKey: "AIzaSyDtlJg9fdaYHAL2gpYubEEq8sn12rBUHgU",
+            authDomain: "kibi-ai-3b5e4.firebaseapp.com",
+            projectId: "kibi-ai-3b5e4",
+            storageBucket: "kibi-ai-3b5e4.firebasestorage.app",
+            messagingSenderId: "750021991886",
+            appId: "1:750021991886:web:2b756a889747b4bccf9f9f"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        const functions = getFunctions(app);
+
+        let currentUid = null;
+        let miningStatus = "READY"; // READY, MINING, CAN_CLAIM
+        let targetEndTime = null;
+        let timerTicker = null;
+        let taskState = { 1: false, 2: false };
+
+        window.handleSecureLogin = async function() {
+            const user = document.getElementById('inputUsername').value.trim();
+            const wallet = document.getElementById('inputWallet').value.trim();
+            if (!user || !wallet) { alert("Lengkapi data terlebih dahulu!"); return; }
+
+            document.getElementById('loginBtnText').innerText = "Mengamankan Enkripsi...";
+
+            try {
+                // 1. Amankan koneksi dengan Anonymous Auth agar tembus Security Rules Firebase
+                const userCredential = await signInAnonymously(auth);
+                currentUid = userCredential.user.uid;
+
+                // 2. Tulis data profil ke tabel users sesuai aturan Firestore
+                const userRef = doc(db, "users", currentUid);
+                const userSnap = await getDoc(userRef);
+
+                if (!userSnap.exists()) {
+                    await setDoc(userRef, { username: user, walletAddress: wallet, is_suspended: false });
+                }
+
+                // Masuk ke dashboard utama
+                document.getElementById('authScreen').classList.add('hidden');
+                document.getElementById('mainApp').classList.remove('hidden');
+                document.getElementById('userDisplay').innerText = "@" + user;
+                document.getElementById('walletDisplay').innerText = wallet.substring(0,5) + "..." + wallet.substring(wallet.length-4);
+
+                // Sinkronisasi data saldo dan status mining dari server
+                await syncServerData();
+
+            } catch (error) {
+                alert("Otentikasi Gagal: " + error.message);
+                document.getElementById('loginBtnText').innerText = "Connect & Start";
+            }
+        }
+
+        async function syncServerData() {
+            if(!currentUid) return;
+
+            // 1. Ambil Data Saldo Nyata dari Koleksi Balances (Sesuai Struktur Back-end kamu)
+            const balRef = doc(db, "balances", currentUid);
+            const balSnap = await getDoc(balRef);
+            if(balSnap.exists()) {
+                document.getElementById('balKibi').innerText = balSnap.data().kibi_points || 0;
+                document.getElementById('balSol').innerText = balSnap.data().sol_balance || "0.00000";
+            }
+
+            // 2. Ambil Status Sesi Tambang Aktif dari Koleksi mining_sessions
+            const sessionRef = doc(db, "mining_sessions", currentUid);
+            const sessionSnap = await getDoc(sessionRef);
+            
+            if(sessionSnap.exists()) {
+                const sessionData = sessionSnap.data();
+                if(sessionData.status === "MINING") {
+                    targetEndTime = sessionData.end_time.toDate().getTime();
+                    const now = new Date().getTime();
+
+                    if(now < targetEndTime) {
+                        miningStatus = "MINING";
+                        runVisualTimer();
+                    } else {
+                        miningStatus = "CAN_CLAIM";
+                        setupClaimUI();
+                    }
+                }
+            }
+            checkAllTasks();
+        }
+
+        window.completeTask = function(num) {
+            taskState[num] = true;
+            document.getElementById(`tCheck${num}`).innerHTML = '<i class="fas fa-check-circle text-cyan-400"></i>';
+            checkAllTasks();
+        }
+
+        function checkAllTasks() {
+            const allDone = Object.values(taskState).every(v => v === true);
+            if(!allDone) return;
+
+            document.getElementById('taskWarningBanner').classList.add('hidden');
+            const btn = document.getElementById('btnMining');
+            btn.disabled = false;
+            btn.classList.remove('bg-slate-700', 'text-slate-400', 'cursor-not-allowed');
+
+            if(miningStatus === "READY") {
+                btn.classList.add('bg-gradient-to-r', 'from-cyan-500', 'to-blue-500', 'text-white');
+                btn.innerHTML = '<span>START CLOUD MINING</span>';
+            } else if (miningStatus === "MINING") {
+                btn.disabled = true;
+                btn.classList.add('bg-slate-800', 'text-cyan-400', 'border', 'border-cyan-500/30');
+                btn.innerHTML = '<i class="fas fa-sync animate-spin mr-2"></i> CLOUD MINING ACTIVE';
+            } else if (miningStatus === "CAN_CLAIM") {
+                btn.classList.add('bg-gradient-to-r', 'from-amber-500', 'to-orange-500', 'text-slate-950');
+                btn.innerHTML = '<span>KLAIM HASIL TAMBANG (+100 KIBI)</span>';
+            }
+        }
+
+        window.handleMiningAction = async function() {
+            const btn = document.getElementById('btnMining');
+            
+            if(miningStatus === "READY") {
+                btn.disabled = true;
+                btn.innerHTML = 'Menghubungkan ke Node Cloud...';
+                
+                try {
+                    // MEMANGGIL CLOUD FUNCTION 1: startMining milikmu
+                    const startMiningFn = httpsCallable(functions, 'startMining');
+                    await startMiningFn();
+                    
+                    alert("Node Server Aktif! Mining berjalan aman di Cloud Backend.");
+                    miningStatus = "MINING";
+                    await syncServerData();
+                } catch(e) {
+                    alert("Gagal memicu Node Cloud: " + e.message);
+                    checkAllTasks();
+                }
+            } 
+            else if(miningStatus === "CAN_CLAIM") {
+                btn.disabled = true;
+                btn.innerHTML = 'Memverifikasi Bukti Konsensus Iklan...';
+
+                try {
+                    // MEMANGGIL CLOUD FUNCTION 2: claimReward milikmu
+                    const claimRewardFn = httpsCallable(functions, 'claimReward');
+                    await claimRewardFn();
+
+                    alert("Validasi Sukses! +100 KIBI & 0.00001 SOL berhasil masuk ke saldo akun.");
+                    miningStatus = "READY";
+                    targetEndTime = null;
+                    if(timerTicker) clearInterval(timerTicker);
+                    
+                    document.getElementById('timerDisplay').innerText = "04:00:00";
+                    document.getElementById('progressBar').style.width = "0%";
+                    
+                    await syncServerData();
+                } catch(e) {
+                    alert("Klaim ditolak server: " + e.message);
+                    checkAllTasks();
+                }
+            }
+        }
+
+        function runVisualTimer() {
+            if(timerTicker) clearInterval(timerTicker);
+            
+            timerTicker = setInterval(() => {
+                const now = new Date().getTime();
+                const difference = targetEndTime - now;
+
+                if (difference <= 0) {
+                    clearInterval(timerTicker);
+                    miningStatus = "CAN_CLAIM";
+                    setupClaimUI();
+                    return;
+                }
+
+                const hours = Math.floor((difference % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                const minutes = Math.floor((difference % (1000 * 60 * 60)) / (1000 * 60));
+                const seconds = Math.floor((difference % (1000 * 60)) / 1000);
+
+                document.getElementById('timerDisplay').innerText = `${hours.toString().padStart(2,'0')}:${minutes.toString().padStart(2,'0')}:${seconds.toString().padStart(2,'0')}`;
+                
+                const totalDuration = 4 * 60 * 60 * 1000;
+                const progressPercent = ((totalDuration - difference) / totalDuration) * 100;
+                document.getElementById('progressBar').style.width = `${progressPercent}%`;
+            }, 1000);
+        }
+
+        function setupClaimUI() {
+            document.getElementById('timerDisplay').innerText = "SELESAI";
+            document.getElementById('progressBar').style.width = "100%";
+            checkAllTasks();
+        }
+
+        window.switchTab = function(tabName) {
+            document.getElementById('tabMining').classList.add('hidden');
+            document.getElementById('tabTasks').classList.add('hidden');
+            document.getElementById('tabSwap').classList.add('hidden');
+            document.querySelectorAll('nav button').forEach(b => b.classList.replace('text-cyan-400', 'text-slate-500'));
+
+            document.getElementById(`tab${tabName.charAt(0).toUpperCase() + tabName.slice(1)}`).classList.remove('hidden');
+            document.getElementById(`nav-${tabName}`).classList.replace('text-slate-500', 'text-cyan-400');
+        }
+    </script>
+</body>
+</html>
