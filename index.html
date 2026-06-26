@@ -25,7 +25,12 @@
 </head>
 <body class="bg-slate-900 text-white font-sans min-h-screen flex flex-col justify-between pb-24">
 
-    <div id="authScreen" class="flex-grow flex flex-col justify-center items-center px-6 my-auto">
+    <div id="loadingOverlay" class="fixed inset-0 bg-slate-950 z-50 flex flex-col justify-center items-center space-y-4">
+        <i class="fas fa-circle-notch text-cyan-400 text-4xl animate-spin"></i>
+        <p class="text-xs text-slate-400 tracking-wider">Memeriksa Sesi Enkripsi...</p>
+    </div>
+
+    <div id="authScreen" class="hidden flex-grow flex flex-col justify-center items-center px-6 my-auto">
         <div class="bg-slate-800 p-8 rounded-3xl shadow-2xl w-full max-w-md border border-slate-700">
             <div class="text-center mb-8">
                 <div class="w-20 h-20 bg-gradient-to-tr from-cyan-500 to-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg shadow-cyan-500/30">
@@ -125,9 +130,8 @@
                 </button>
             </div>
 
-            <div class="w-full text-center mt-4 min-h-[90px] bg-slate-800/30 rounded-xl flex items-center justify-center border border-dashed border-slate-700">
-                <ins class="adsbygoogle" style="display:block" data-ad-client="ca-pub-1644961938657479" data-ad-slot="auto" data-full-width-responsive="true"></ins>
-                <script> (adsbygoogle = window.adsbygoogle || []).push({}); </script>
+            <div class="text-center pt-2">
+                <button onclick="handleLogout()" class="text-xs text-red-400/70 hover:text-red-400 underline font-medium"><i class="fas fa-sign-out-alt mr-1"></i>Disconnect Wallet / Log Keluar</button>
             </div>
         </div>
 
@@ -171,7 +175,7 @@
                     <p class="text-xs text-slate-400 mt-1">Undang teman kamu untuk menambang bersama dan dapatkan bonus +10% dari hasil tambang mereka.</p>
                 </div>
                 <div class="bg-slate-900 rounded-xl p-3 border border-slate-700 flex justify-between items-center">
-                    <span id="refLinkDisplay" class="text-xs text-cyan-400 font-mono select-all">https://kibi.ai/ref?id=loading</span>
+                    <span id="refLinkDisplay" class="text-xs text-cyan-400 font-mono select-all">Loading link...</span>
                     <button onclick="navigator.clipboard.writeText(document.getElementById('refLinkDisplay').innerText); alert('Link disalin!')" class="text-xs bg-slate-800 hover:bg-slate-700 px-3 py-1.5 rounded-lg border border-slate-600 font-bold">Salin</button>
                 </div>
             </div>
@@ -207,8 +211,8 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-        import { getFirestore, doc, getDoc, setDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+        import { getFirestore, doc, getDoc, setDoc, updateDoc, collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyDtlJg9fdaYHAL2gpYubEEq8sn12rBUHgU",
@@ -233,14 +237,86 @@
         let currentSolSaldo = 0.0;
         let boostMultiplier = 1.0;
 
+        // PROTEKSI PERSISTENSI LOGIN (AUTO LOGIN SAAT REFRESH)
+        onAuthStateChanged(auth, async (user) => {
+            if (user) {
+                currentUid = user.uid;
+                const userRef = doc(db, "users", currentUid);
+                const userSnap = await getDoc(userRef);
+
+                if (userSnap.exists()) {
+                    // Cek status banned
+                    if(userSnap.data().is_suspended === true) {
+                        showBannedError();
+                        await signOut(auth);
+                        return;
+                    }
+                    loadMainApplicationUI(userSnap.data().username, userSnap.data().walletAddress);
+                } else {
+                    showAuthScreen();
+                }
+            } else {
+                showAuthScreen();
+            }
+        });
+
+        function showAuthScreen() {
+            document.getElementById('loadingOverlay').classList.add('hidden');
+            document.getElementById('mainApp').classList.add('hidden');
+            document.getElementById('authScreen').classList.remove('hidden');
+        }
+
+        function loadMainApplicationUI(username, wallet) {
+            document.getElementById('loadingOverlay').classList.add('hidden');
+            document.getElementById('authScreen').classList.add('hidden');
+            document.getElementById('mainApp').classList.remove('hidden');
+            
+            document.getElementById('userDisplay').innerText = "@" + username;
+            document.getElementById('walletDisplay').innerText = wallet.substring(0,5) + "..." + wallet.substring(wallet.length-4);
+            
+            // LINK REFERRAL MENYESUAIKAN DOMAIN GITHUB PAGES SECARA OTOMATIS & DINAMIS
+            const currentDomain = window.location.origin + window.location.pathname;
+            document.getElementById('refLinkDisplay').innerText = `${currentDomain}?ref=${currentUid}`;
+
+            syncServerData();
+        }
+
+        function showBannedError() {
+            document.getElementById('loadingOverlay').classList.add('hidden');
+            alert("ACCESS DENIED!\n\nThis wallet address has already been linked to another device. Multi-device mining with the same wallet is strictly prohibited. Your account has been permanently BANNED.");
+            window.location.reload();
+        }
+
         window.handleSecureLogin = async function() {
             const user = document.getElementById('inputUsername').value.trim();
             const wallet = document.getElementById('inputWallet').value.trim();
             if (!user || !wallet) { alert("Lengkapi data terlebih dahulu!"); return; }
 
-            document.getElementById('loginBtnText').innerText = "Menghubungkan...";
+            document.getElementById('loginBtnText').innerText = "Verifikasi Keamanan...";
 
             try {
+                // SANTI-SISTEM MULTI DEVICE: CEK APAKAH WALLET SUDAH DIPAKAI DI TEMPAT LAIN
+                const q = query(collection(db, "users"), where("walletAddress", "==", wallet));
+                const querySnapshot = await getDocs(q);
+                
+                if (!querySnapshot.empty) {
+                    // Wallet terdeteksi ada di database, mari periksa apakah UID perangkatnya sama
+                    let existingUserDoc = querySnapshot.docs[0];
+                    let registeredUid = existingUserDoc.id;
+
+                    // Buat Login Sementara untuk mendapatkan UID Perangkat saat ini
+                    const tempCredential = await signInAnonymously(auth);
+                    let currentDeviceUid = tempCredential.user.uid;
+
+                    if (registeredUid !== currentDeviceUid) {
+                        // BEDA PERANGKAT! LANGSUNG BAN AKUN ASLINYA & TOLAK AKSES LOGIN BARU
+                        await updateDoc(doc(db, "users", registeredUid), { is_suspended: true });
+                        showBannedError();
+                        return;
+                    }
+                }
+
+                // Jika lolos verifikasi perangkat atau wallet baru mendaftar
                 const userCredential = await signInAnonymously(auth);
                 currentUid = userCredential.user.uid;
 
@@ -252,17 +328,20 @@
                     await setDoc(doc(db, "balances", currentUid), { kibi_points: 0, sol_balance: "0.000000000", booster_count: 0 });
                 }
 
-                document.getElementById('authScreen').classList.add('hidden');
-                document.getElementById('mainApp').classList.remove('hidden');
-                document.getElementById('userDisplay').innerText = "@" + user;
-                document.getElementById('walletDisplay').innerText = wallet.substring(0,5) + "..." + wallet.substring(wallet.length-4);
-                document.getElementById('refLinkDisplay').innerText = `https://kibi.ai/ref?id=${currentUid}`;
-
-                await syncServerData();
+                loadMainApplicationUI(user, wallet);
 
             } catch (error) {
                 alert("Otentikasi Gagal: " + error.message);
                 document.getElementById('loginBtnText').innerText = "Connect Akun";
+            }
+        }
+
+        window.handleLogout = async function() {
+            if(confirm("Apakah kamu yakin ingin keluar dan memutuskan sambungan wallet?")) {
+                document.getElementById('loadingOverlay').classList.remove('hidden');
+                if(timerTicker) clearInterval(timerTicker);
+                await signOut(auth);
+                window.location.reload();
             }
         }
 
@@ -306,7 +385,6 @@
             checkAllTasks();
         }
 
-        // VALIDASI TUGAS YANG BENAR
         window.openTaskLink = function(num, url) {
             window.open(url, '_blank');
             taskState[num].clicked = true;
@@ -360,7 +438,6 @@
             }
         }
 
-        // SPEED BOOSTER ENGINE
         window.watchAdBooster = async function() {
             if(!currentUid) return;
             const balRef = doc(db, "balances", currentUid);
@@ -391,7 +468,7 @@
                 
                 try {
                     const now = new Date();
-                    const endTime = new Date(now.getTime() + 4 * 60 * 60 * 1000); // 4 Jam
+                    const endTime = new Date(now.getTime() + 4 * 60 * 60 * 1000); 
 
                     await setDoc(sessionRef, {
                         start_time: now,
@@ -413,7 +490,6 @@
                 try {
                     const balRef = doc(db, "balances", currentUid);
                     
-                    // Hitung reward dikalikan efek booster speed
                     const baseKibiReward = 100;
                     const baseSolReward = 0.00001;
                     
@@ -446,7 +522,6 @@
             }
         }
 
-        // VISUAL EFFECTS ENGINE
         function setVisualMiningActive() {
             document.getElementById('miningRing').classList.remove('hidden');
             document.getElementById('miningSpinner').classList.remove('hidden');
